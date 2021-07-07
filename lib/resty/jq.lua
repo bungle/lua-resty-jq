@@ -172,7 +172,7 @@ function jq:filter(data, opts)
     if kind == lib.JV_KIND_INVALID then
       break
 
-    elseif kind == lib.JV_KIND_STRING and raw then
+    elseif kind == lib.JV_KIND_STRING and (raw or join) then
       i = i + 1
       buf[i] = ffi.string(lib.jv_string_value(jv_next))
 
