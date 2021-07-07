@@ -94,12 +94,12 @@ function jq:compile(program)
   if not ctx then
     return nil, "not initialized"
   end
+
   if lib.jq_compile(ctx, program) ~= 1 then
-    self.error = "compilation failed"
+    return nil, "compilation failed"
   end
 
   self.compiled = true
-
   return true
 end
 
@@ -141,10 +141,6 @@ function jq:filter(data, opts)
 
       join = opts.join
     end
-  end
-
-  if self.error then
-    return nil, "unable to transform: " .. self.error
   end
 
   if not self.compiled then
