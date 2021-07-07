@@ -139,7 +139,7 @@ function jq:filter(data, opts)
         return nil, "invalid option: join"
       end
 
-      join = opts.raw_no_lf
+      join = opts.join
     end
   end
 
