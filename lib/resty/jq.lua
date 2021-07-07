@@ -75,7 +75,8 @@ function jq.new()
   lib.jq_set_nomem_handler(context, mcb, nil)
 
   return setmetatable({
-    context = context
+    context = context,
+    compiled = false,
   }, jq)
 end
 
@@ -84,6 +85,7 @@ function jq:teardown()
   arr[0] = self.context
   lib.jq_teardown(arr)
   arr[0] = nil
+  self.context = nil
 end
 
 
