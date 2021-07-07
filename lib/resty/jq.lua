@@ -2,7 +2,7 @@ local ffi = require "ffi"
 
 
 local type = type
-local table = table
+local tbl_concat = table.concat
 local setmetatable = setmetatable
 
 
@@ -191,7 +191,7 @@ function jq:filter(data, opts)
     end
   end
 
-  return table.concat(buf, nil, 1, i)
+  return tbl_concat(buf, nil, 1, i)
 end
 
 
