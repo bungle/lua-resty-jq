@@ -91,6 +91,9 @@ end
 
 function jq:compile(program)
   local ctx = self.context
+  if not ctx then
+    return nil, "not initialized"
+  end
   if lib.jq_compile(ctx, program) ~= 1 then
     self.error = "compilation failed"
   end
@@ -149,6 +152,9 @@ function jq:filter(data, opts)
   end
 
   local ctx = self.context
+  if not ctx then
+    return nil, "not initialized"
+  end
   local buf = {}
   local i = 0
   local jv = lib.jv_parse_sized(data, #data)
