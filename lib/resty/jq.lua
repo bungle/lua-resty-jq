@@ -158,7 +158,7 @@ function jq:filter(data, opts)
   local buf = {}
   local i = 0
   local jv = lib.jv_parse_sized(data, #data)
-  if not jv then
+  if lib.jv_get_kind(jv) == lib.JV_KIND_INVALID then
     return nil, "unable to filter: parse failed"
   end
 
