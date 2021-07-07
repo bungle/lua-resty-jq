@@ -144,13 +144,14 @@ function jq:filter(data, opts)
   end
 
   if not self.compiled then
-    return nil, "unable to transform: program was not compiled"
+    return nil, "unable to filter: program was not compiled"
   end
 
   local ctx = self.context
   if not ctx then
     return nil, "not initialized"
   end
+
   local buf = {}
   local i = 0
   local jv = lib.jv_parse_sized(data, #data)
