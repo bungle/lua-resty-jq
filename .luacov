@@ -1,0 +1,3 @@
+modules = {
+   ["jq"] = "lib/resty/jq.lua",
+}
