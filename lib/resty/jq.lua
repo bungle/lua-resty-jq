@@ -74,6 +74,7 @@ local DEFAULT_FILTER_OPTIONS = {
   compact_output = true,   -- set to false for pretty output
   raw_output     = false,  -- output strings raw, instead of quoted JSON
   join_output    = false,  -- as raw, but do not add newlines
+  ascii_output   = false,  -- escape non-ASCII characters
 }
 
 
@@ -131,13 +132,31 @@ local function check_filter_options(options)
   options = setmetatable(options, { __index = DEFAULT_FILTER_OPTIONS })
 
   for k, v in pairs(options) do
+    if DEFAULT_FILTER_OPTIONS[k] == nil then
+      return nil, k
+    end
+
     local option_type = type(DEFAULT_FILTER_OPTIONS[k])
-    if type(rawget(options, k)) ~= option_type then
+    if option_type and type(rawget(options, k)) ~= option_type then
       return nil, k .. " expects a " .. option_type
     end
   end
 
   return options
+end
+
+
+local function get_dump_flags(options)
+  local dump_flags = 0
+  if not options.compact_output then
+    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_PRETTY, lib.JV_PRINT_SPACE1)
+  end
+
+  if options.ascii_output then
+    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_ASCII)
+  end
+
+  return dump_flags
 end
 
 
@@ -156,10 +175,7 @@ function jq:filter(data, options)
     return nil, "invalid option: " .. err
   end
 
-  local dump_flags = 0
-  if not options.compact_output then
-    dump_flags = bit.bor(lib.JV_PRINT_PRETTY, lib.JV_PRINT_SPACE1)
-  end
+  local dump_flags = get_dump_flags(options)
 
   local buf = {}
   local i = 0

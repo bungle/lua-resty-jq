@@ -139,5 +139,19 @@ describe("jq ffi", function()
 }
 ]], res)
     end)
+
+    it("ascii_output", function()
+      jq:compile(".")
+
+      local res, err = jq:filter([[{"foo": "baré"}]], { ascii_output = false })
+      assert.is_nil(err)
+      assert.truthy(res)
+      assert.same("{\"foo\":\"baré\"}\n", res)
+
+      local res, err = jq:filter([[{"foo": "baré"}]], { ascii_output = true })
+      assert.is_nil(err)
+      assert.truthy(res)
+      assert.same("{\"foo\":\"bar\\u00e9\"}\n", res)
+    end)
   end)
 end)
