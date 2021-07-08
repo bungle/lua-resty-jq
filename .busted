@@ -2,6 +2,6 @@ return {
   default = {
     verbose = true,
     coverage = true,
-		lpath = "./lib/?.lua;",
+    lpath = "./lib/?.lua;",
   },
 }
