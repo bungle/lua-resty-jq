@@ -75,6 +75,7 @@ local DEFAULT_FILTER_OPTIONS = {
   raw_output     = false,  -- output strings raw, instead of quoted JSON
   join_output    = false,  -- as raw, but do not add newlines
   ascii_output   = false,  -- escape non-ASCII characters
+  sort_keys      = false,  -- sort fields in each object
 }
 
 
@@ -154,6 +155,10 @@ local function get_dump_flags(options)
 
   if options.ascii_output then
     dump_flags = bit.bor(dump_flags, lib.JV_PRINT_ASCII)
+  end
+
+  if options.sort_keys then
+    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_SORTED)
   end
 
   return dump_flags
