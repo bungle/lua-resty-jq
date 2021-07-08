@@ -18,6 +18,20 @@ typedef enum {
   JV_KIND_OBJECT
 } jv_kind;
 
+typedef enum {
+  JV_PRINT_PRETTY   = 1,
+  JV_PRINT_ASCII    = 2,
+  JV_PRINT_COLOR    = 4, JV_PRINT_COLOUR = 4,
+  JV_PRINT_SORTED   = 8,
+  JV_PRINT_INVALID  = 16,
+  JV_PRINT_REFCOUNT = 32,
+  JV_PRINT_TAB      = 64,
+  JV_PRINT_ISATTY   = 128,
+  JV_PRINT_SPACE0   = 256,
+  JV_PRINT_SPACE1   = 512,
+  JV_PRINT_SPACE2   = 1024,
+} jv_print_flags;
+
 typedef struct {
   unsigned char kind_flags;
   unsigned char pad_;
@@ -56,11 +70,16 @@ local mcb = ffi.cast("void (*)(void *)", function() end)
 
 local LF = "\n"
 
-
-local jq = {
-    _VERSION = "0.1"
+local DEFAULT_FILTER_OPTIONS = {
+  compact_output = true,   -- set to false for pretty output
+  raw_output     = false,  -- output strings raw, instead of quoted JSON
+  join_output    = false,  -- as raw, but do not add newlines
 }
 
+
+local jq = {
+  _VERSION = "0.1",
+}
 
 jq.__index = jq
 
@@ -104,52 +123,42 @@ function jq:compile(program)
 end
 
 
-function jq:filter(data, opts)
-  local dump = 0
-  local flags = 0
-  local raw = false
-  local join = false
-  if type(opts) == "table" then
-    if opts.dump then
-      if type(opts.dump) ~= "number" then
-        return nil, "invalid option: dump"
-      end
+local function check_filter_options(options)
+  if type(options) ~= "table" then
+    options = {}
+  end
 
-      dump = opts.dump
+  options = setmetatable(options, { __index = DEFAULT_FILTER_OPTIONS })
+
+  for k, v in pairs(options) do
+    local option_type = type(DEFAULT_FILTER_OPTIONS[k])
+    if type(rawget(options, k)) ~= option_type then
+      return nil, k .. " expects a " .. option_type
     end
+  end
 
-    if opts.flags then
-      if type(opts.flags) ~= "number" then
-        return nil, "invalid option: flags"
-      end
+  return options
+end
 
-      flags = opts.flags
-    end
 
-    if opts.raw then
-      if type(opts.raw) ~= "boolean" then
-        return nil, "invalid option: raw"
-      end
-
-      raw = opts.raw
-    end
-
-    if opts.join then
-      if type(opts.join) ~= "boolean" then
-        return nil, "invalid option: join"
-      end
-
-      join = opts.join
-    end
+function jq:filter(data, options)
+  local ctx = self.context
+  if not ctx then
+    return nil, "not initialized"
   end
 
   if not self.compiled then
     return nil, "unable to filter: program was not compiled"
   end
 
-  local ctx = self.context
-  if not ctx then
-    return nil, "not initialized"
+  local options, err = check_filter_options(options)
+  if not options then
+    return nil, "invalid option: " .. err
+  end
+
+  local dump_flags = 0
+  if not options.compact_output then
+    dump_flags = bit.bor(lib.JV_PRINT_PRETTY, lib.JV_PRINT_SPACE1)
   end
 
   local buf = {}
@@ -159,7 +168,8 @@ function jq:filter(data, opts)
     return nil, "unable to filter: parse failed"
   end
 
-  lib.jq_start(ctx, jv, flags)
+  local debug_trace_flags = 0
+  lib.jq_start(ctx, jv, debug_trace_flags)
 
   while true do
     local jv_next = lib.jq_next(ctx)
@@ -175,12 +185,14 @@ function jq:filter(data, opts)
     if kind == lib.JV_KIND_INVALID then
       break
 
-    elseif kind == lib.JV_KIND_STRING and (raw or join) then
+    elseif kind == lib.JV_KIND_STRING
+      and (options.raw_output or options.join_output) then
+
       i = i + 1
       buf[i] = ffi.string(lib.jv_string_value(jv_next))
 
     else
-      local jv_string = ffi.gc(lib.jv_dump_string(jv_next, dump), lib.jv_free)
+      local jv_string = ffi.gc(lib.jv_dump_string(jv_next, dump_flags), lib.jv_free)
       if not jv_string then
         return nil, "unable to filter: dump string failed"
       end
@@ -188,7 +200,7 @@ function jq:filter(data, opts)
       buf[i] = ffi.string(lib.jv_string_value(jv_string))
     end
 
-    if not join then
+    if not options.join_output then
       i = i + 1
       buf[i] = LF
     end
