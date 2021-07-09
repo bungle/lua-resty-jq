@@ -16,4 +16,5 @@ jobs:
       - run: luarocks install luacheck
       - run: luarocks install luacov
       - run: luarocks install busted
-      - run: make all
+      - run: make lint
+      - run: make coverage
