@@ -1,6 +1,11 @@
 describe("jq ffi", function()
   describe("module:", function()
-    local jq = require "resty.jq"
+    local jq, err = require "resty.jq"
+    it("loads module", function()
+      assert.truthy(jq)
+      assert.is_nil(err)
+    end)
+
     it("has a _VERSION", function()
       assert.is_string(jq._VERSION)
     end)
