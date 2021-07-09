@@ -1,7 +1,7 @@
 all: lint test
 
 lint:
-	@luacheck --std=luajit+busted .
+	@luacheck --std=luajit+busted lib spec
 
 test:
 	@busted --lua=luajit
