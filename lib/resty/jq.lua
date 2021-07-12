@@ -132,7 +132,7 @@ local function check_filter_options(options)
 
   options = setmetatable(options, { __index = DEFAULT_FILTER_OPTIONS })
 
-  for k, v in pairs(options) do
+  for k, _ in pairs(options) do
     if DEFAULT_FILTER_OPTIONS[k] == nil then
       return nil, k
     end
@@ -175,9 +175,12 @@ function jq:filter(data, options)
     return nil, "unable to filter: program was not compiled"
   end
 
-  local options, err = check_filter_options(options)
-  if not options then
-    return nil, "invalid option: " .. err
+  do
+    local err
+    options, err = check_filter_options(options)
+    if not options then
+      return nil, "invalid option: " .. err
+    end
   end
 
   local dump_flags = get_dump_flags(options)

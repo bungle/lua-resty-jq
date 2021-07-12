@@ -1,7 +1,12 @@
+all: lint test
+
+lint:
+	@luacheck --std=luajit+busted lib spec
+
 test:
 	@busted --lua=luajit
 
-coverage: test
+coverage: clean test
 	@luacov
 	@tail -n 9 luacov.report.out
 
