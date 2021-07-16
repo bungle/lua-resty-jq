@@ -163,7 +163,7 @@ describe("jq ffi", function()
     it("ascii_output && raw_output, raw is ignored", function()
       jq:compile(".foo")
 
-      res, err = jq:filter([[{"foo": "baré"}]], { ascii_output = true, raw_output = true })
+      local res, err = jq:filter([[{"foo": "baré"}]], { ascii_output = true, raw_output = true })
       assert.is_nil(err)
       assert.truthy(res)
       assert.same("\"bar\\u00e9\"\n", res)
