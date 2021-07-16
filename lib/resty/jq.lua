@@ -143,6 +143,11 @@ local function check_filter_options(options)
     end
   end
 
+  -- jq ignores raw output in ascii mode
+  if options.ascii_output and options.raw_output then
+    options.raw_output = false
+  end
+
   return options
 end
 
