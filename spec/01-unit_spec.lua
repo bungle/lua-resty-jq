@@ -90,6 +90,12 @@ describe("jq ffi", function()
       assert.falsy(res)
     end)
 
+    it("fails to filter with no input", function()
+      local res, err = jq:filter()
+      assert.same(err, "unable to filter: no data given")
+      assert.falsy(res)
+    end)
+
     it("filters with good input", function()
       local res, err = jq:filter([[{"foo": 42, "bar": "less interesting data"}]])
       assert.truthy(res)

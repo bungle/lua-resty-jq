@@ -180,6 +180,10 @@ function jq:filter(data, options)
     return nil, "unable to filter: program was not compiled"
   end
 
+  if type(data) ~= "string" then
+    return nil, "unable to filter: no data given"
+  end
+
   do
     local err
     options, err = check_filter_options(options)
