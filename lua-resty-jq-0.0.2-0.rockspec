@@ -1,9 +1,9 @@
 package = "lua-resty-jq"
-version = "0.0.1-0"
+version = "0.0.2-0"
 
 source = {
   url = "git://github.com/bungle/lua-resty-jq",
-  tag = "0.0.1"
+  tag = "0.0.2"
 }
 
 description = {
