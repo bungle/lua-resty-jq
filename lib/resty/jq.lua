@@ -143,6 +143,11 @@ local function check_filter_options(options)
     end
   end
 
+  -- join_output implies raw_output
+  if options.join_output then
+    options.raw_output = true
+  end
+
   -- jq ignores raw output in ascii mode
   if options.ascii_output and options.raw_output then
     options.raw_output = false
@@ -218,9 +223,7 @@ function jq:filter(data, options)
     if kind == lib.JV_KIND_INVALID then
       break
 
-    elseif kind == lib.JV_KIND_STRING
-      and (options.raw_output or options.join_output) then
-
+    elseif kind == lib.JV_KIND_STRING and options.raw_output then
       i = i + 1
       buf[i] = ffi.string(lib.jv_string_value(jv_next))
 
