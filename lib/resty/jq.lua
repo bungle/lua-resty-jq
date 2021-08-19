@@ -186,7 +186,7 @@ function jq:filter(data, options)
   end
 
   if type(data) ~= "string" then
-    return nil, "unable to filter: no data given"
+    return nil, "unable to filter: no input data was given"
   end
 
   do
@@ -203,7 +203,7 @@ function jq:filter(data, options)
   local i = 0
   local jv = lib.jv_parse_sized(data, #data)
   if lib.jv_get_kind(jv) == lib.JV_KIND_INVALID then
-    return nil, "unable to filter: parse failed"
+    return nil, "unable to filter: could not parse input data, is it valid JSON?"
   end
 
   local debug_trace_flags = 0

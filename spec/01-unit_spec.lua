@@ -86,13 +86,13 @@ describe("jq ffi", function()
 
     it("fails to filter with bad input", function()
       local res, err = jq:filter("[")
-      assert.same(err, "unable to filter: parse failed")
+      assert.same(err, "unable to filter: could not parse input data, is it valid JSON?")
       assert.falsy(res)
     end)
 
     it("fails to filter with no input", function()
       local res, err = jq:filter()
-      assert.same(err, "unable to filter: no data given")
+      assert.same(err, "unable to filter: no input data was given")
       assert.falsy(res)
     end)
 
