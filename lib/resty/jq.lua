@@ -57,6 +57,9 @@ void jv_free(jv);
 jv jq_next(jq_state *);
 jv jv_parse_sized(const char* string, int length);
 jv jv_dump_string(jv, int flags);
+int jv_invalid_has_msg(jv);
+jv jv_invalid_get_msg(jv);
+jv jv_copy(jv);
 jv_kind jv_get_kind(jv);
 const char* jv_string_value(jv);
 ]]
@@ -199,15 +202,24 @@ function jq:filter(data, options)
 
   local dump_flags = get_dump_flags(options)
 
-  local buf = {}
-  local i = 0
   local jv = lib.jv_parse_sized(data, #data)
   if lib.jv_get_kind(jv) == lib.JV_KIND_INVALID then
-    return nil, "unable to filter: could not parse input data, is it valid JSON?"
+    local msg
+    if lib.jv_invalid_has_msg(lib.jv_copy(jv)) then
+      local jv_msg = lib.jv_invalid_get_msg(jv)
+      msg = ffi.string(lib.jv_string_value(jv_msg))
+    else
+      msg = "unknown parse error" -- should not be possible
+    end
+
+    return nil, "unable to filter: " .. msg
   end
 
   local debug_trace_flags = 0
   lib.jq_start(ctx, jv, debug_trace_flags)
+
+  local buf = {}
+  local i = 0
 
   while true do
     local jv_next = lib.jq_next(ctx)

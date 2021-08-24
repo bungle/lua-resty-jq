@@ -86,7 +86,7 @@ describe("jq ffi", function()
 
     it("fails to filter with bad input", function()
       local res, err = jq:filter("[")
-      assert.same(err, "unable to filter: could not parse input data, is it valid JSON?")
+      assert.same(err, "unable to filter: Unfinished JSON term at EOF at line 1, column 1 (while parsing '[')")
       assert.falsy(res)
     end)
 
