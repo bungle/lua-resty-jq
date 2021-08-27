@@ -126,7 +126,7 @@ function jq:compile(program)
   end
 
   if lib.jq_compile(ctx, program) ~= 1 then
-    return nil, "compilation failed"
+    return nil, "compilation failed: invalid jq program"
   end
 
   self.compiled = true

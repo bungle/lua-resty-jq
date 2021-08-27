@@ -52,7 +52,7 @@ describe("jq ffi", function()
       local jq = require("resty.jq").new()
       local res, err = jq:compile(".[")
       assert.falsy(res)
-      assert.same("compilation failed", err)
+      assert.same("compilation failed: invalid jq program", err)
     end)
 
     it("refuses to filter an uncompiled program", function()
