@@ -90,6 +90,12 @@ jq.__index = jq
 
 
 function jq.new()
+  -- It's important that this function is not jit compiled, since we pass Lua
+  -- callbacks to a C function, which will be called in error scenarios. LuaJIT
+  -- mostly knows how to spot this, but in some scenarious (inc. OpenResty) it
+  -- can sometimes crash the VM if we don't give it this hint.
+  jit.off()
+
   local context = lib.jq_init()
   if not context then
     return nil, "unable to initialize jq state"
