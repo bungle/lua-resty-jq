@@ -44,10 +44,6 @@ typedef struct {
 } jv;
 
 typedef struct jq_state jq_state;
-typedef void *jq_msg_cb(void *, jv*);
-
-void jq_set_error_cb(jq_state *, jq_msg_cb, void *);
-void jq_set_nomem_handler(jq_state *, void (*)(void *), void *);
 
 jq_state *jq_init(void);
 int jq_compile(jq_state *, const char*);
@@ -67,8 +63,6 @@ const char* jv_string_value(jv);
 
 local lib = ffi.load "jq"
 local arr = ffi.new("struct jq_state*[1]")
-local ecb = ffi.cast("jq_msg_cb *", function() end)
-local mcb = ffi.cast("void (*)(void *)", function() end)
 
 
 local LF = "\n"
@@ -90,19 +84,10 @@ jq.__index = jq
 
 
 function jq.new()
-  -- It's important that this function is not jit compiled, since we pass Lua
-  -- callbacks to a C function, which will be called in error scenarios. LuaJIT
-  -- mostly knows how to spot this, but in some scenarious (inc. OpenResty) it
-  -- can sometimes crash the VM if we don't give it this hint.
-  jit.off()
-
   local context = lib.jq_init()
   if not context then
     return nil, "unable to initialize jq state"
   end
-
-  lib.jq_set_error_cb(context, ecb, nil)
-  lib.jq_set_nomem_handler(context, mcb, nil)
 
   return setmetatable({
     context = context,
