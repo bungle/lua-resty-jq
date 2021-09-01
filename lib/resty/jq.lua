@@ -77,7 +77,7 @@ local DEFAULT_FILTER_OPTIONS = {
 
 
 local jq = {
-  _VERSION = "0.1",
+  _VERSION = "0.1.0",
 }
 
 jq.__index = jq
