@@ -98,7 +98,7 @@ character replaced with the equivalent escape sequence. Default is `false`.
 `lua-resty-jq` uses two clause BSD license.
 
 ```
-Copyright (c) 2020 Aapo Talvensaari
+Copyright (c) 2020 – 2021 Aapo Talvensaari, James Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
