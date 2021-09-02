@@ -1,9 +1,14 @@
 local ffi = require "ffi"
 
 
+local bor = bit.bor
 local type = type
+local pairs = pairs
+local rawget = rawget
 local tbl_concat = table.concat
 local setmetatable = setmetatable
+local ffi_string = ffi.string
+local ffi_gc = ffi.gc
 
 
 ffi.cdef [[
@@ -154,15 +159,15 @@ end
 local function get_dump_flags(options)
   local dump_flags = 0
   if not options.compact_output then
-    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_PRETTY, lib.JV_PRINT_SPACE1)
+    dump_flags = bor(dump_flags, lib.JV_PRINT_PRETTY, lib.JV_PRINT_SPACE1)
   end
 
   if options.ascii_output then
-    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_ASCII)
+    dump_flags = bor(dump_flags, lib.JV_PRINT_ASCII)
   end
 
   if options.sort_keys then
-    dump_flags = bit.bor(dump_flags, lib.JV_PRINT_SORTED)
+    dump_flags = bor(dump_flags, lib.JV_PRINT_SORTED)
   end
 
   return dump_flags
@@ -198,7 +203,7 @@ function jq:filter(data, options)
     local msg
     if lib.jv_invalid_has_msg(lib.jv_copy(jv)) then
       local jv_msg = lib.jv_invalid_get_msg(jv)
-      msg = ffi.string(lib.jv_string_value(jv_msg))
+      msg = ffi_string(lib.jv_string_value(jv_msg))
     else
       msg = "unknown parse error" -- should not be possible
     end
@@ -228,15 +233,15 @@ function jq:filter(data, options)
 
     elseif kind == lib.JV_KIND_STRING and options.raw_output then
       i = i + 1
-      buf[i] = ffi.string(lib.jv_string_value(jv_next))
+      buf[i] = ffi_string(lib.jv_string_value(jv_next))
 
     else
-      local jv_string = ffi.gc(lib.jv_dump_string(jv_next, dump_flags), lib.jv_free)
+      local jv_string = ffi_gc(lib.jv_dump_string(jv_next, dump_flags), lib.jv_free)
       if not jv_string then
         return nil, "unable to filter: dump string failed"
       end
       i = i + 1
-      buf[i] = ffi.string(lib.jv_string_value(jv_string))
+      buf[i] = ffi_string(lib.jv_string_value(jv_string))
     end
 
     if not options.join_output then
