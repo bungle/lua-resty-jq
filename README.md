@@ -86,7 +86,34 @@ this option, you can force jq to produce pure ASCII output with every non-ASCII
 character replaced with the equivalent escape sequence. Default is `false`.
 * `sort_keys`: Output the fields of each object with the keys in sorted order.
   Default is `false`.
+* `table_output`: Returns a sequence-like table of encoded results instead of
+    concatenating them into a single string. Default is `false`.
 
+Additionally, `filter()` takes a table as an optional 3rd argument. When
+supplied, this table will be used to store results instead of creating a new
+table for each call to `filter()`:
+
+```lua
+local buf = {}
+local res, err = jq:filter(data, nil, buf)
+for _, elem in ipairs(buf) do
+  -- ...
+end
+```
+
+Doing so implies `options.table_output = true`, so this option must be
+explicitly set to `false` in order to receive a string result:
+
+```lua
+local buf = {}
+local res, err = jq:filter(data, { table_output = false }, buf)
+print(res)
+```
+
+**NOTE:** `filter()` adds a trailing `nil` to the table such that the length
+operator (`#buf`) and `ipairs(buf)` return accurate results after execution, but
+it does _not_ clear the table. Callers must clear the table themselves if
+desired.
 
 ## See Also
 

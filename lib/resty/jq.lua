@@ -78,6 +78,7 @@ local DEFAULT_FILTER_OPTIONS = {
   join_output    = false,  -- as raw, but do not add newlines
   ascii_output   = false,  -- escape non-ASCII characters
   sort_keys      = false,  -- sort fields in each object
+  table_output   = false,  -- return results in a sequence-like table instead of a string
 }
 
 
@@ -142,8 +143,14 @@ local function check_filter_options(options)
     end
   end
 
-  -- join_output implies raw_output
-  if options.join_output then
+  if options.table_output then
+    -- don't add newlines to the output buffer if returning a table
+    if rawget(options, "join_output") == nil then
+      options.join_output = true
+    end
+
+  elseif options.join_output then
+    -- join_output implies raw_output
     options.raw_output = true
   end
 
@@ -174,7 +181,7 @@ local function get_dump_flags(options)
 end
 
 
-function jq:filter(data, options)
+function jq:filter(data, options, buf)
   local ctx = self.context
   if not ctx then
     return nil, "not initialized"
@@ -186,6 +193,18 @@ function jq:filter(data, options)
 
   if type(data) ~= "string" then
     return nil, "unable to filter: no input data was given"
+  end
+
+  if buf ~= nil then
+    if type(buf) ~= "table" then
+      return nil, "invalid buffer type"
+    end
+
+    options = options or {}
+
+    if options.table_output == nil then
+      options.table_output = true
+    end
   end
 
   do
@@ -214,7 +233,7 @@ function jq:filter(data, options)
   local debug_trace_flags = 0
   lib.jq_start(ctx, jv, debug_trace_flags)
 
-  local buf = {}
+  buf = buf or {}
   local i = 0
 
   while true do
@@ -248,6 +267,13 @@ function jq:filter(data, options)
       i = i + 1
       buf[i] = LF
     end
+  end
+
+  -- add a nil terminator in case we were passed in a reused buffer table
+  buf[i + 1] = nil
+
+  if options.table_output then
+    return buf
   end
 
   return tbl_concat(buf, nil, 1, i)

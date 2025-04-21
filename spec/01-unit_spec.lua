@@ -102,6 +102,53 @@ describe("jq ffi", function()
       assert.is_nil(err)
       assert.same("42\n", res)
     end)
+
+    it("reuses an optional buffer table", function()
+      local stream = require("resty.jq").new()
+      assert(stream:compile(".arr[]"))
+
+      local data = [[{ "arr": [ "x", "y", { "z": 2 } ] } ]]
+      local buf = {}
+      local res, err = stream:filter(data, nil, buf)
+      assert.truthy(res)
+      assert.is_nil(err)
+
+      -- this is explicitly an == check to validate that the same table
+      -- was returned
+      assert.equals(buf, res)
+
+      assert.same({ [["x"]], [["y"]], [[{"z":2}]] }, buf)
+    end)
+
+    it("validates the reusable buffer table input", function()
+      local res, err = jq:filter("{}", nil, "not a table")
+      assert.falsy(res)
+      assert.string(err)
+      assert.matches("invalid buffer type", err)
+    end)
+
+    it("adds a trailing nil to the buffer to ensure the length operator works correctly", function()
+      local stream = require("resty.jq").new()
+      assert(stream:compile(".arr[]"))
+
+      local data = [[{ "arr": [ "x", "y", { "z": 2 } ] } ]]
+      local buf = { "a", "b", "c", "d", "e" }
+      local res, err = stream:filter(data, nil, buf)
+      assert.truthy(res)
+      assert.is_nil(err)
+
+      -- same table returned
+      assert.equals(buf, res)
+
+      assert.equals(3, #buf)
+      assert.same({ [["x"]], [["y"]], [[{"z":2}]], nil, "e" }, buf)
+
+      local c = 0
+      for _ in ipairs(buf) do
+        c = c + 1
+      end
+      assert.equals(3, c)
+    end)
   end)
 
   describe("options:", function()
@@ -196,6 +243,42 @@ describe("jq ffi", function()
       assert.is_nil(err)
       assert.truthy(res)
       assert.same("{\"bar\":\"foo\",\"foo\":\"bar\"}\n", res)
+    end)
+
+    it("table_output", function()
+      jq:compile(".arr[]")
+
+      local data = [[{ "arr": [ "x", "y", { "z": 2 } ] } ]]
+      local res, err = jq:filter(data, { table_output = true })
+      assert.truthy(res)
+      assert.is_nil(err)
+      assert.is_table(res)
+      assert.same({ [["x"]], [["y"]], [[{"z":2}]] }, res)
+    end)
+
+    it("table_output enabled by default for reused buffer table", function()
+      jq:compile(".arr[]")
+
+      local data = [[{ "arr": [ "x", "y", { "z": 2 } ] } ]]
+      local buf = {}
+      local options = {}
+      local res, err = jq:filter(data, options, buf)
+      assert.truthy(res)
+      assert.is_nil(err)
+      assert.is_table(res)
+      assert.same({ [["x"]], [["y"]], [[{"z":2}]] }, res)
+      assert.truthy(options.table_output)
+    end)
+
+    it("table_output = false with reused buffer table", function()
+      jq:compile(".arr[]")
+
+      local data = [[{ "arr": [ "x", "y", { "z": 2 } ] } ]]
+      local buf = {}
+      local res, err = jq:filter(data, { table_output = false }, buf)
+      assert.truthy(res)
+      assert.is_nil(err)
+      assert.is_string(res)
     end)
   end)
 end)
