@@ -37,6 +37,15 @@ typedef enum {
   JV_PRINT_SPACE2   = 1024,
 } jv_print_flags;
 
+enum {
+    JQ_OK              =  0,
+    JQ_OK_NULL_KIND    = -1, /* exit 0 if --exit-status is not set*/
+    JQ_ERROR_SYSTEM    =  2,
+    JQ_ERROR_COMPILE   =  3,
+    JQ_OK_NO_OUTPUT    = -4, /* exit 0 if --exit-status is not set*/
+    JQ_ERROR_UNKNOWN   =  5,
+};
+
 typedef struct {
   unsigned char kind_flags;
   unsigned char pad_;
@@ -63,11 +72,51 @@ jv jv_invalid_get_msg(jv);
 jv jv_copy(jv);
 jv_kind jv_get_kind(jv);
 const char* jv_string_value(jv);
+int jq_halted(jq_state *);
+jv jq_get_exit_code(jq_state *);
+jv jq_get_error_message(jq_state *);
+double jv_number_value(jv);
+jv jq_util_input_get_position(jq_state*);
 ]]
 
 
 local lib = ffi.load "jq"
 local arr = ffi.new("struct jq_state*[1]")
+
+
+local function jv_gc(jv)
+  return ffi_gc(jv, lib.jv_free)
+end
+
+
+local function jv_string_value(jv)
+  return ffi_string(lib.jv_string_value(jv))
+end
+
+
+local function jv_dump_string(jv, flags)
+  local jv_string = jv_gc(lib.jv_dump_string(jv, flags or 0))
+  if not jv_string then
+    return nil, "dump string failed"
+  end
+  return jv_string_value(jv_string)
+end
+
+
+local function jv_error_string(e)
+  local jv = jv_gc(e)
+  local err_kind = lib.jv_get_kind(jv)
+
+  local err
+  if err_kind == lib.JV_KIND_STRING then
+    err = jv_string_value(jv)
+
+  elseif err_kind ~= lib.JV_KIND_INVALID and err_kind ~= lib.JV_KIND_NULL then
+    err = jv_dump_string(jv)
+  end
+
+  return err or "unknown error"
+end
 
 
 local LF = "\n"
@@ -236,8 +285,10 @@ function jq:filter(data, options, buf)
   buf = buf or {}
   local i = 0
 
+  local jv_next
+
   while true do
-    local jv_next = lib.jq_next(ctx)
+    jv_next = lib.jq_next(ctx)
     if not jv_next then
       return nil, "unable to filter: invalid next"
     end
@@ -252,15 +303,15 @@ function jq:filter(data, options, buf)
 
     elseif kind == lib.JV_KIND_STRING and options.raw_output then
       i = i + 1
-      buf[i] = ffi_string(lib.jv_string_value(jv_next))
+      buf[i] = jv_string_value(jv_next)
 
     else
-      local jv_string = ffi_gc(lib.jv_dump_string(jv_next, dump_flags), lib.jv_free)
-      if not jv_string then
-        return nil, "unable to filter: dump string failed"
+      local str, err = jv_dump_string(jv_next, dump_flags)
+      if not str then
+        return nil, "unable to filter: " .. err
       end
       i = i + 1
-      buf[i] = ffi_string(lib.jv_string_value(jv_string))
+      buf[i] = str
     end
 
     if not options.join_output then
@@ -272,11 +323,38 @@ function jq:filter(data, options, buf)
   -- add a nil terminator in case we were passed in a reused buffer table
   buf[i + 1] = nil
 
-  if options.table_output then
-    return buf
+  local ec = lib.JQ_OK
+  local err
+
+  if lib.jq_halted(ctx) == 1 then
+    local jv_ec = jv_gc(lib.jq_get_exit_code(ctx))
+    local ec_kind = lib.jv_get_kind(jv_ec)
+
+    if ec_kind == lib.JV_KIND_NUMBER then
+      ec = lib.jv_number_value(jv_ec)
+
+    elseif ec_kind ~= lib.JV_KIND_INVALID then
+      ec = lib.JQ_ERROR_UNKNOWN
+    end
+
+    if ec ~= lib.JQ_OK then
+      local msg = jv_error_string(lib.jq_get_error_message(ctx))
+      err = "filter halted: " .. msg
+    end
+
+  elseif lib.jv_get_kind(jv_next) == lib.JV_KIND_INVALID
+    and lib.jv_invalid_has_msg(lib.jv_copy(jv_next)) == 1
+  then
+    ec = lib.JQ_ERROR_UNKNOWN
+    local msg = jv_error_string(lib.jv_invalid_get_msg(lib.jv_copy(jv_next)))
+    err = "filter exception: " .. msg
   end
 
-  return tbl_concat(buf, nil, 1, i)
+  if options.table_output then
+    return buf, err, ec
+  end
+
+  return tbl_concat(buf, nil, 1, i), err, ec
 end
 
 

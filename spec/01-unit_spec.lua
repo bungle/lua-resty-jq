@@ -149,6 +149,85 @@ describe("jq ffi", function()
       end
       assert.equals(3, c)
     end)
+
+    it("stops with no error on halt()", function()
+      assert(jq:compile([[
+        .[] |
+        if . == 7 then
+          halt
+        else
+          .
+        end
+      ]]))
+
+      local res, err, ec = jq:filter("[ 1, 3, 5, 7, 9 ]")
+      assert.same("1\n3\n5\n", res)
+      assert.is_nil(err)
+      assert.same(0, ec)
+    end)
+  end)
+
+  describe("errors: ", function()
+    local jq
+    before_each(function()
+      jq = require("resty.jq").new()
+    end)
+
+    it("returns the error string and exit code for runtime exceptions", function()
+      assert(jq:compile(".nested.field.nope"))
+      local res, err, ec = jq:filter([["i am not an object"]])
+      assert.same("", res)
+      assert.same([[filter exception: Cannot index string with string "nested"]], err)
+      assert.same(5, ec)
+    end)
+
+    it("returns the error string and exit code from error()", function()
+      assert(jq:compile([[
+        .[] |
+        if . == 7 then
+          error("seven")
+        else
+          .
+        end
+      ]]))
+
+      local res, err, ec = jq:filter("[ 1, 3, 5, 7, 9 ]")
+      assert.same("1\n3\n5\n", res)
+      assert.same("filter exception: seven", err)
+      assert.same(5, ec)
+    end)
+
+    it("returns the error string and exit code from halt_error()", function()
+      assert(jq:compile([[
+        .[] |
+        if . == 7 then
+          "oops" | halt_error(7)
+        else
+          .
+        end
+      ]]))
+
+      local res, err, ec = jq:filter("[ 1, 3, 5, 7, 9 ]")
+      assert.same("1\n3\n5\n", res)
+      assert.same("filter halted: oops", err)
+      assert.same(7, ec)
+    end)
+
+    it("returns the error JSON and exit code from halt_error()", function()
+      assert(jq:compile([[
+        .[] |
+        if . == 7 then
+          { err: "bad number" } | halt_error(7)
+        else
+          .
+        end
+      ]]))
+
+      local res, err, ec = jq:filter("[ 1, 3, 5, 7, 9 ]")
+      assert.same("1\n3\n5\n", res)
+      assert.same([[filter halted: {"err":"bad number"}]], err)
+      assert.same(7, ec)
+    end)
   end)
 
   describe("options:", function()
