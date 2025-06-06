@@ -1,9 +1,9 @@
 package = "lua-resty-jq"
-version = "0.1.0-0"
+version = "0.2.0-0"
 
 source = {
-  url = "git://github.com/bungle/lua-resty-jq",
-  tag = "0.1.0"
+  url = "git+https://github.com/bungle/lua-resty-jq",
+  tag = "0.2.0",
 }
 
 description = {
@@ -18,6 +18,7 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
-    ["resty.jq"] = "lib/resty/jq.lua",
-  }
+    ["resty.jq"] = "lib/resty/jq/init.lua",
+    ["resty.jq.lib"] = "lib/resty/jq/lib.lua",
+  },
 }

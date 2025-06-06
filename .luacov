@@ -1,3 +1,4 @@
 modules = {
-   ["jq"] = "lib/resty/jq.lua",
+   ["jq"] = "lib/resty/jq/init.lua",
+   ["lib"] = "lib/resty/jq/lib.lua",
 }
