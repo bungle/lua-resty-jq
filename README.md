@@ -125,7 +125,7 @@ desired.
 `lua-resty-jq` uses two clause BSD license.
 
 ```
-Copyright (c) 2020 – 2021 Aapo Talvensaari, James Hurst
+Copyright (c) 2020 – 2025 Aapo Talvensaari, James Hurst, Michael Martin
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
