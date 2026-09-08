@@ -47,6 +47,97 @@ describe("jq ffi", function()
     end)
   end)
 
+  describe("garbage collection:", function()
+    local jq
+    local original_jq
+    local original_lib
+    local counter
+
+    local function collect()
+      collectgarbage("collect")
+      collectgarbage("collect")
+    end
+
+    before_each(function()
+      original_jq = package.loaded["resty.jq"]
+      original_lib = require "resty.jq.lib"
+
+      local native_lib = original_lib
+      local calls = { teardown = 0 }
+      counter = calls
+
+      package.loaded["resty.jq.lib"] = setmetatable({
+        jq_teardown = function(state)
+          calls.teardown = calls.teardown + 1
+          return native_lib.jq_teardown(state)
+        end,
+      }, {
+        __index = function(_, key)
+          return native_lib[key]
+        end,
+      })
+      package.loaded["resty.jq"] = nil
+      jq = require "resty.jq"
+    end)
+
+    after_each(function()
+      collect()
+      package.loaded["resty.jq"] = original_jq
+      package.loaded["resty.jq.lib"] = original_lib
+    end)
+
+    it("releases an abandoned context", function()
+      do
+        local instance = assert(jq.new())
+        assert(instance:compile("."))
+      end
+
+      collect()
+      assert.same(1, counter.teardown)
+    end)
+
+    it("releases a context after compilation fails", function()
+      do
+        local instance = assert(jq.new())
+        local ok, err = instance:compile(".[")
+        assert.falsy(ok)
+        assert.same("compilation failed: invalid jq program", err)
+      end
+
+      collect()
+      assert.same(1, counter.teardown)
+    end)
+
+    it("waits until the last context reference is dropped", function()
+      local context
+      do
+        local instance = assert(jq.new())
+        context = instance.context
+      end
+
+      collect()
+      assert.truthy(context)
+      assert.same(0, counter.teardown)
+
+      context = nil -- luacheck: ignore 311
+      collect()
+      assert.same(1, counter.teardown)
+    end)
+
+    it("releases an explicitly torn down context only once", function()
+      do
+        local instance = assert(jq.new())
+        instance:teardown()
+        instance:teardown()
+        assert.is_nil(instance.context)
+        assert.same(1, counter.teardown)
+      end
+
+      collect()
+      assert.same(1, counter.teardown)
+    end)
+  end)
+
   describe("compilation:", function()
     it("fails to compile a bad program", function()
       local jq = require("resty.jq").new()
