@@ -69,6 +69,13 @@ local jq = {
 jq.__index = jq
 
 
+local function teardown_context(context)
+  JQ_STATE[0] = context
+  LIB.jq_teardown(JQ_STATE)
+  JQ_STATE[0] = nil
+end
+
+
 function jq.new()
   if not JQ_STATE then
     LIB = require("resty.jq.lib")
@@ -81,16 +88,20 @@ function jq.new()
   end
 
   return setmetatable({
-    context = context,
+    context = ffi_gc(context, teardown_context),
     compiled = false,
   }, jq)
 end
 
 
 function jq:teardown()
-  JQ_STATE[0] = self.context
-  LIB.jq_teardown(JQ_STATE)
-  JQ_STATE[0] = nil
+  local context = self.context
+  if not context then
+    return
+  end
+
+  ffi_gc(context, nil)
+  teardown_context(context)
   self.context = nil
 end
 

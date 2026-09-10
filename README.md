@@ -50,11 +50,18 @@ Running the above code will output (or similar):
 
 Allocates a `libjq` context.
 
+The native context is automatically freed when its owning FFI cdata is
+garbage-collected. Garbage collection is not immediate; call `teardown()`
+to release the resources as soon as they are no longer needed.
+
 ## teardown
 
 `syntax: jq:teardown()`
 
 Destroys the `libjq` context, freeing resources.
+
+This cancels automatic finalization before freeing the context. Calling
+`teardown()` more than once is safe.
 
 ## compile
 
