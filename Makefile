@@ -4,7 +4,7 @@ lint:
 	@luacheck --std=luajit+busted lib spec
 
 test:
-	@busted --lua=luajit
+	@busted -o gtest --lua=luajit
 
 coverage: clean test
 	@luacov
