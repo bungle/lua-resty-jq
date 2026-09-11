@@ -43,7 +43,7 @@ local function jv_error_string(e)
     err = jv_string_value(jv)
 
   elseif err_kind ~= LIB.JV_KIND_INVALID and err_kind ~= LIB.JV_KIND_NULL then
-    err = jv_dump_string(jv)
+    err = jv_dump_string(LIB.jv_copy(jv)) -- jv_dump_string consumes its argument; jv is owned by the GC finalizer
   end
 
   return err or "unknown error"
@@ -63,7 +63,7 @@ local DEFAULT_FILTER_OPTIONS = {
 
 
 local jq = {
-  _VERSION = "0.2.0",
+  _VERSION = "0.2.1",
 }
 
 jq.__index = jq
@@ -113,6 +113,7 @@ function jq:compile(program)
   end
 
   if LIB.jq_compile(ctx, program) ~= 1 then
+    self.compiled = false
     return nil, "compilation failed: invalid jq program"
   end
 

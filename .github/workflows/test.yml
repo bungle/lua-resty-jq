@@ -6,13 +6,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: hishamhm/gh-actions-lua@master
+      - uses: actions/checkout@v7
+      - uses: leafo/gh-actions-lua@v13
         with:
-          luaVersion: "luajit-2.1"
-      - uses: luarocks/gh-actions-luarocks@master
+          luaVersion: "luajit-openresty"
+      - uses: leafo/gh-actions-luarocks@v6
         with:
-          luaRocksVersion: "@418d2ab34891b130cc317df32f65f978640febcf"
+          luaRocksVersion: "3.13.0"
       - run: sudo apt-get update
       - run: sudo apt-get install -y libjq-dev
       - run: luarocks install luacheck
