@@ -181,6 +181,16 @@ describe("jq ffi", function()
       assert.falsy(res)
     end)
 
+    it("releases parse error messages on bad input", function()
+      -- regression: the errmsg jv leaked once per call (only visible under
+      -- valgrind --leak-check=full: ~84 bytes x iterations, stack in jv_parse_sized)
+      for _ = 1, 100 do
+        local res, err = jq:filter("[")
+        assert.falsy(res)
+        assert.same("unable to filter: Unfinished JSON term at EOF at line 1, column 1 (while parsing '[')", err)
+      end
+    end)
+
     it("fails to filter with no input", function()
       local res, err = jq:filter()
       assert.same(err, "unable to filter: no input data was given")
@@ -268,7 +278,8 @@ describe("jq ffi", function()
       assert(jq:compile(".nested.field.nope"))
       local res, err, ec = jq:filter([["i am not an object"]])
       assert.same("", res)
-      assert.same([[filter exception: Cannot index string with string "nested"]], err)
+      -- jq >= 1.8 wraps the offending value in parens: with string ("nested")
+      assert.match([[filter exception: Cannot index string with string %(?"nested"%)?]], err)
       assert.same(5, ec)
     end)
 
@@ -318,6 +329,47 @@ describe("jq ffi", function()
       assert.same("1\n3\n5\n", res)
       assert.same([[filter halted: {"err":"bad number"}]], err)
       assert.same(7, ec)
+    end)
+
+    it("does not double-free an object halt_error() message", function()
+      -- regression: the dumped error-message copy was released twice
+      -- (jv_dump_string consumes it + ffi.gc finalizer frees it), stealing a
+      -- refcount from the shared constant object. Deterministic under valgrind:
+      -- force a GC cycle so the copy's finalizer runs BEFORE the teardown.
+      local j = require("resty.jq").new()
+      assert(j:compile([[if . == 7 then { err: "bad number" } | halt_error(7) else . end]]))
+
+      local res, err, ec = j:filter("7")
+      assert.same("", res)
+      assert.same([[filter halted: {"err":"bad number"}]], err)
+      assert.same(7, ec)
+
+      collectgarbage("collect") -- finalize the dumped copy now
+      j:teardown()              -- the stolen refcount turns this into a double-free
+    end)
+
+    it("releases the terminal error value from error()", function()
+      -- regression: the terminal invalid jv from jq_next was never freed
+      -- (only visible under valgrind --leak-check=full: ~24B + msg per call)
+      assert(jq:compile([[error("boom")]]))
+      for _ = 1, 100 do
+        local res, err, ec = jq:filter("null")
+        assert.same("", res)
+        assert.same("filter exception: boom", err)
+        assert.same(5, ec)
+      end
+    end)
+
+    it("releases the terminal error value on runtime exceptions", function()
+      -- same regression via the runtime-exception path
+      assert(jq:compile(".nested.field.nope"))
+      for _ = 1, 100 do
+        local res, err, ec = jq:filter([["i am not an object"]])
+        assert.same("", res)
+        -- jq >= 1.8 wraps the offending value in parens: with string ("nested")
+        assert.match("^filter exception: Cannot index string with string", err)
+        assert.same(5, ec)
+      end
     end)
   end)
 

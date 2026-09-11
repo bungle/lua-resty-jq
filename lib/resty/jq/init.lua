@@ -218,7 +218,7 @@ function jq:filter(data, options, buf)
   if LIB.jv_get_kind(jv) == LIB.JV_KIND_INVALID then
     local msg
     if LIB.jv_invalid_has_msg(LIB.jv_copy(jv)) then
-      local jv_msg = LIB.jv_invalid_get_msg(jv)
+      local jv_msg = jv_gc(LIB.jv_invalid_get_msg(jv))
       msg = ffi_string(LIB.jv_string_value(jv_msg))
     else
       msg = "unknown parse error" -- should not be possible
@@ -252,6 +252,7 @@ function jq:filter(data, options, buf)
     elseif kind == LIB.JV_KIND_STRING and options.raw_output then
       i = i + 1
       buf[i] = jv_string_value(jv_next)
+      LIB.jv_free(jv_next) -- jv_string_value does not consume its argument
 
     else
       local str, err = jv_dump_string(jv_next, dump_flags)
@@ -297,6 +298,8 @@ function jq:filter(data, options, buf)
     local msg = jv_error_string(LIB.jv_invalid_get_msg(LIB.jv_copy(jv_next)))
     err = "filter exception: " .. msg
   end
+
+  LIB.jv_free(jv_next) -- release the terminal value from jq_next (no-op for plain invalid)
 
   if options.table_output then
     return buf, err, ec
