@@ -63,7 +63,7 @@ local DEFAULT_FILTER_OPTIONS = {
 
 
 local jq = {
-  _VERSION = "0.2.1",
+  _VERSION = "0.2.2",
 }
 
 jq.__index = jq
