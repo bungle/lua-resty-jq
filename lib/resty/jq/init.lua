@@ -218,7 +218,7 @@ function jq:filter(data, options, buf)
   if LIB.jv_get_kind(jv) == LIB.JV_KIND_INVALID then
     local msg
     if LIB.jv_invalid_has_msg(LIB.jv_copy(jv)) then
-      local jv_msg = LIB.jv_invalid_get_msg(jv)
+      local jv_msg = jv_gc(LIB.jv_invalid_get_msg(jv))
       msg = ffi_string(LIB.jv_string_value(jv_msg))
     else
       msg = "unknown parse error" -- should not be possible
@@ -236,7 +236,7 @@ function jq:filter(data, options, buf)
   local jv_next
 
   while true do
-    jv_next = LIB.jq_next(ctx)
+    jv_next = jv_gc(LIB.jq_next(ctx))
     if not jv_next then
       return nil, "unable to filter: invalid next"
     end
@@ -254,7 +254,7 @@ function jq:filter(data, options, buf)
       buf[i] = jv_string_value(jv_next)
 
     else
-      local str, err = jv_dump_string(jv_next, dump_flags)
+      local str, err = jv_dump_string(LIB.jv_copy(jv_next), dump_flags)
       if not str then
         return nil, "unable to filter: " .. err
       end
