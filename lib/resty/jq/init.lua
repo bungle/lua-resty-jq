@@ -236,7 +236,7 @@ function jq:filter(data, options, buf)
   local jv_next
 
   while true do
-    jv_next = LIB.jq_next(ctx)
+    jv_next = jv_gc(LIB.jq_next(ctx))
     if not jv_next then
       return nil, "unable to filter: invalid next"
     end
@@ -252,10 +252,9 @@ function jq:filter(data, options, buf)
     elseif kind == LIB.JV_KIND_STRING and options.raw_output then
       i = i + 1
       buf[i] = jv_string_value(jv_next)
-      LIB.jv_free(jv_next) -- jv_string_value does not consume its argument
 
     else
-      local str, err = jv_dump_string(jv_next, dump_flags)
+      local str, err = jv_dump_string(LIB.jv_copy(jv_next), dump_flags)
       if not str then
         return nil, "unable to filter: " .. err
       end
@@ -298,8 +297,6 @@ function jq:filter(data, options, buf)
     local msg = jv_error_string(LIB.jv_invalid_get_msg(LIB.jv_copy(jv_next)))
     err = "filter exception: " .. msg
   end
-
-  LIB.jv_free(jv_next) -- release the terminal value from jq_next (no-op for plain invalid)
 
   if options.table_output then
     return buf, err, ec
